@@ -1,18 +1,22 @@
 package ra.entity;
 
 import java.io.Serializable;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
+import java.time.LocalDate;
+import java.time.Month;
+import java.time.Period;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Scanner;
 
 public class Student implements IEntity<Student>, Serializable {
     private String studentId;
     private String studentName;
     private int age;
-    private Date birthDay;
+    private LocalDate birthDay;
     private boolean sex;
     private float mark_html;
     private float mark_css;
@@ -24,7 +28,7 @@ public class Student implements IEntity<Student>, Serializable {
     }
 
     public Student(String studentId, String studentName,
-                   int age, Date birthDay, boolean sex, float mark_html,
+                   int age, LocalDate birthDay, boolean sex, float mark_html,
                    float mark_css, float mark_javascript, String rank) {
         this.studentId = studentId;
         this.studentName = studentName;
@@ -61,11 +65,11 @@ public class Student implements IEntity<Student>, Serializable {
         this.age = age;
     }
 
-    public Date getBirthDay() {
+    public LocalDate getBirthDay() {
         return birthDay;
     }
 
-    public void setBirthDay(Date birthDay) {
+    public void setBirthDay(LocalDate birthDay) {
         this.birthDay = birthDay;
     }
 
@@ -167,27 +171,52 @@ public class Student implements IEntity<Student>, Serializable {
         } while (true);
     }
 
-    public static Date validateBirthDay(Scanner scanner) {
+
+    public static LocalDate validateBirthDay(Scanner scanner) {
         System.out.println("Nhập vào ngày sinh của sinh viên:");
-        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
-        do {
-            try {
-                Date birthDay = sdf.parse(scanner.nextLine());
-                Calendar cal = Calendar.getInstance();
-                cal.setTime(birthDay);
-                if (cal.get(Calendar.YEAR) < 2005) {
-                    return birthDay;
-                } else {
-                    System.err.println("Năm sinh phải trước năm 2005, vui lòng nhập lại");
-                }
-            } catch (ParseException ex1) {
-                System.err.println("Ngày sinh phải có định dạng dd/MM/yyyy, vui lòng nhập lại");
-            } catch (Exception ex) {
-                System.err.println("Xảy ra lỗi không xác định, vui lòng liên hệ với hệ thống");
-            }
-        } while (true);
+        String inputDate = scanner.nextLine();
+
+        while (!isValidDate(inputDate)) {
+            System.err.println("Ngày tháng năm sinh không hợp lệ. Vui lòng nhập lại:");
+            inputDate = scanner.nextLine();
+        }
+
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        return LocalDate.parse(inputDate, dateFormatter);
     }
 
+    public static boolean isValidDate(String dateStr) {
+        // Chế độ STRICT để không cho phép ngày tháng không hợp lệ
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/uuuu")
+                .withResolverStyle(ResolverStyle.STRICT);
+
+        try {
+            LocalDate date = LocalDate.parse(dateStr, dateFormatter);
+
+            int day = date.getDayOfMonth();
+            Month month = date.getMonth();
+            int year = date.getYear();
+
+            // Kiểm tra ngày hợp lệ cho từng tháng
+            if ((month == Month.APRIL || month == Month.JUNE || month == Month.SEPTEMBER
+                    || month == Month.NOVEMBER) && day > 30) {
+                return false;
+            } else if (month == Month.FEBRUARY) {
+                if ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)) {
+                    // Năm nhuận
+                    return day <= 29;
+                } else {
+                    // Năm không nhuận
+                    return day <= 28;
+                }
+            } else {
+                return true;
+            }
+
+        } catch (DateTimeParseException e) {
+            return false;
+        }
+    }
     public static boolean validateSex(Scanner scanner) {
         System.out.println("Nhập vào giới tính của sinh viên:");
         do {
@@ -253,10 +282,11 @@ public class Student implements IEntity<Student>, Serializable {
             }
         } while (true);
     }
+
     @Override
     public void displayData() {
         System.out.printf("Mã sv: %s - Tên sv:  %s- năm sinh: %td/%tb/%tY - tuôi: %d\n",
-                this.studentId, this.studentName, this.birthDay,this.birthDay,this.birthDay, this.age);
+                this.studentId, this.studentName, this.birthDay, this.birthDay, this.birthDay, this.age);
         System.out.printf("điểm html: %f - css: %f - javascript: %f - avgMark: %f - rank: %s\n",
                 this.mark_html, this.mark_css, this.mark_javascript, this.avgMark, this.rank);
 
@@ -264,10 +294,10 @@ public class Student implements IEntity<Student>, Serializable {
 
     @Override
     public void calAge() {
-        Date now = new Date();
-        this.age = now.getYear() - this.birthDay.getYear();
+        LocalDate now = LocalDate.now();
+        Period period = Period.between(this.birthDay, now);
+        this.age = period.getYears();
     }
-
 
 
     @Override

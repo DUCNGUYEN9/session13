@@ -73,9 +73,9 @@ public class StudentImp {
                 student.inputData(scanner, studentList);
                 studentList.add(student);
             }
-        }catch (NumberFormatException numberFormatException){
+        } catch (NumberFormatException numberFormatException) {
             System.err.println("vui long nhập số");
-        }catch (Exception e){
+        } catch (Exception e) {
             System.err.println("lỗi chưa xác định hãy liên hệ hệ thống");
         }
 
@@ -96,38 +96,22 @@ public class StudentImp {
     }
 
     public static void sortStudent() {
-        studentList.sort(new Comparator<Student>() {
-            @Override
-            public int compare(Student o1, Student o2) {
-                return o1.getAge() - o2.getAge();
-            }
-        });
-        for (Student student : studentList) {
-            student.displayData();
-        }
+        studentList.stream().sorted(Comparator.comparing(Student::getAge)).forEach(Student::displayData);
     }
 
     public static void statisticRank() {
-        int yeuNum = 0, gioiNum = 0, tbNum = 0, khaNum = 0, xsNum = 0;
-
-        for (Student student : studentList) {
-            if (student.getRank().equals("Yếu")) {
-                yeuNum++;
-            } else if (student.getRank().equals("Trung bình")) {
-                tbNum++;
-            } else if (student.getRank().equals("Khá")) {
-                khaNum++;
-            } else if (student.getRank().equals("Giỏi")) {
-                gioiNum++;
-            } else {
-                xsNum++;
-            }
-        }
+        int yeuNum, gioiNum, tbNum, khaNum, xsNum;
+        yeuNum = (int) studentList.stream().filter(student -> student.getRank().equals("Yếu")).count();
+        gioiNum = (int) studentList.stream().filter(student -> student.getRank().equals("Trung bình")).count();
+        tbNum = (int) studentList.stream().filter(student -> student.getRank().equals("Khá")).count();
+        khaNum = (int) studentList.stream().filter(student -> student.getRank().equals("Giỏi")).count();
+        xsNum = (int) studentList.stream().filter(student -> student.getRank().equals("Xuất sắc")).count();
         System.out.printf("Yếu: %d - Trung bình: %d - Khá: %d - Giỏi: %d - Xuất sắc: %d\n",
                 yeuNum, tbNum, khaNum, gioiNum, xsNum);
     }
 
     public static void updateStudent() {
+        boolean isExist = true;
         try {
             System.out.println("Nhập ma sinh viên cập nhật");
             String idStudent = scanner.nextLine();
@@ -141,22 +125,38 @@ public class StudentImp {
                     student.setMark_javascript(Student.validateMarkJavascript(scanner));
                     student.calAge();
                     student.calAvgMark_Rank();
-
+                } else {
+                    isExist = false;
                 }
             }
-        }catch(Exception exception){
+        } catch (Exception exception) {
             System.err.println("lỗi chưa xác định hãy liên hệ hệ thống");
+        }
+        if (!isExist) {
+            System.err.println("Mã sinh viên bạn nhập không tồn tại");
         }
     }
 
     public static void searchStudent() {
+        boolean isNotExist = false;
         System.out.println("Nhập tên sinh viên tim kiem");
-        String nameStudent = scanner.nextLine();
-        for (Student student : studentList) {
-            if (student.getStudentName().toLowerCase().contains(nameStudent.toLowerCase())) {
-                student.displayData();
+        do {
+
+            String nameStudent = scanner.nextLine();
+            boolean exists = studentList.stream()
+                    .anyMatch(student -> student.getStudentName().toLowerCase().contains(nameStudent.toLowerCase()));
+
+            studentList.stream()
+                    .filter(student -> student.getStudentName()
+                            .toLowerCase()
+                            .contains(nameStudent.toLowerCase()))
+                    .forEach(Student::displayData);
+            if (!exists) {
+                System.err.println("tên sinh viên bạn nhập không tồn tại");
+            } else {
+                isNotExist = true;
             }
-        }
+        } while (!isNotExist);
     }
 
     public static void writeDataToFile() {
@@ -197,13 +197,11 @@ public class StudentImp {
         try {
             fis = new FileInputStream(file);
             ois = new ObjectInputStream(fis);
-            if (ois.readObject() != null) {
-                studentList = (List<Student>) ois.readObject();
-            }
+            studentList = (List<Student>) ois.readObject();
         } catch (FileNotFoundException ex1) {
             System.err.println("Không tồn tại file");
         } catch (IOException ex2) {
-            System.err.println("Lỗi khi đọc file");
+//            System.err.println("Lỗi khi đọc file");
         } catch (Exception ex) {
             System.err.println("Có lỗi trong quá trình đọc dữ liệu từ file");
         } finally {
